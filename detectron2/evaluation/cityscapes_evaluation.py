@@ -58,7 +58,7 @@ class CityscapesInstanceEvaluator(CityscapesEvaluator):
     """
 
     def process(self, inputs, outputs):
-        from deeplearning.projects.cityscapesApi.cityscapesscripts.helpers.labels import name2label
+        from cityscapesscripts.helpers.labels import name2label
 
         for input, output in zip(inputs, outputs):
             file_name = input["file_name"]
@@ -71,6 +71,8 @@ class CityscapesInstanceEvaluator(CityscapesEvaluator):
                 with open(pred_txt, "w") as fout:
                     for i in range(num_instances):
                         pred_class = output.pred_classes[i]
+                        if pred_class == 255 or pred_class < 0:
+                            continue
                         classes = self._metadata.thing_classes[pred_class]
                         class_id = name2label[classes].id
                         score = output.scores[i]
@@ -96,7 +98,7 @@ class CityscapesInstanceEvaluator(CityscapesEvaluator):
         comm.synchronize()
         if comm.get_rank() > 0:
             return
-        import deeplearning.projects.cityscapesApi.cityscapesscripts.evaluation.evalInstanceLevelSemanticLabeling as cityscapes_eval  # noqa: E501
+        import cityscapesscripts.evaluation.evalInstanceLevelSemanticLabeling as cityscapes_eval  # noqa: E501
 
         self._logger.info("Evaluating results under {} ...".format(self._temp_dir))
 
@@ -140,9 +142,7 @@ class CityscapesSemSegEvaluator(CityscapesEvaluator):
     """
 
     def process(self, inputs, outputs):
-        from deeplearning.projects.cityscapesApi.cityscapesscripts.helpers.labels import (
-            trainId2label,
-        )
+        from cityscapesscripts.helpers.labels import trainId2label
 
         for input, output in zip(inputs, outputs):
             file_name = input["file_name"]
@@ -151,6 +151,7 @@ class CityscapesSemSegEvaluator(CityscapesEvaluator):
 
             output = output["sem_seg"].argmax(dim=0).to(self._cpu_device).numpy()
             pred = 255 * np.ones(output.shape, dtype=np.uint8)
+            pred[pred == 255] = 0  # set background to 0
             for train_id, label in trainId2label.items():
                 if label.ignoreInEval:
                     continue
@@ -163,7 +164,7 @@ class CityscapesSemSegEvaluator(CityscapesEvaluator):
             return
         # Load the Cityscapes eval script *after* setting the required env var,
         # since the script reads CITYSCAPES_DATASET into global variables at load time.
-        import deeplearning.projects.cityscapesApi.cityscapesscripts.evaluation.evalPixelLevelSemanticLabeling as cityscapes_eval  # noqa: E501
+        import cityscapesscripts.evaluation.evalPixelLevelSemanticLabeling as cityscapes_eval
 
         self._logger.info("Evaluating results under {} ...".format(self._temp_dir))
 

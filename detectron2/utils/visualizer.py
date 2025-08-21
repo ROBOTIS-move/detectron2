@@ -241,7 +241,10 @@ def _create_text_labels(classes, scores, class_names, is_crowd=None):
     labels = None
     if classes is not None:
         if class_names is not None and len(class_names) > 0:
-            labels = [class_names[i] for i in classes]
+            if classes != [255]:
+                labels = [class_names[i] for i in classes]
+            else:
+                labels = 'unknown'
         else:
             labels = [str(i) for i in classes]
     if scores is not None:
@@ -547,7 +550,7 @@ class Visualizer:
             colors = [
                 self._jitter([x / 255 for x in self.metadata.thing_colors[c]]) for c in category_ids
             ]
-        except AttributeError:
+        except AttributeError and IndexError:
             colors = None
         self.overlay_instances(masks=masks, labels=labels, assigned_colors=colors, alpha=alpha)
 

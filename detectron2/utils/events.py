@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 _CURRENT_STORAGE_STACK = []
-
+_LOGGER_SAVE_PATH = '/mnt/NAS3/auto_labeling/train_logger'
 
 def get_event_storage():
     """
@@ -316,6 +316,37 @@ class CommonMetricPrinter(EventWriter):
                 memory="max_mem: {:.0f}M".format(max_mem_mb) if max_mem_mb is not None else "",
             )
         )
+
+        # Save the logger to a file
+        if iteration % 2 == 0 or iteration % 3 == 1  or iteration == self._max_iter:
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            save_path = os.path.join(_LOGGER_SAVE_PATH, today)
+            if not os.path.exists(save_path):
+                os.makedirs(save_path, exist_ok=True)
+            metrics_dict = {
+                    "time":         time.time(),         # UNIX timestamp
+                    "iter":         iteration,
+                    "eta":          eta_string,          # "" 이면 빈 문자열 저장
+                    "lr":           lr,
+                    "max_mem_mb":   max_mem_mb,
+                    "avg_time":     avg_iter_time,
+                    "last_time":    last_iter_time,
+                    "avg_data":     avg_data_time,
+                    "last_data":    last_data_time,
+                    "loss":  {
+                        k: float(v.median(storage.count_samples(k, self._window_size)))
+                        for k, v in storage.histories().items() if "loss" in k
+                    },
+                    "metric": {
+                        k: float(v.median(storage.count_samples(k, self._window_size)))
+                        for k, v in storage.histories().items() if "[metric]" in k
+                    },
+                }
+            with open(os.path.join(save_path, f"log_{iteration}.json"), "a") as f:
+                json.dump(metrics_dict, f, indent=4)
+                f.write("\n")
+        
+
 
 
 class EventStorage:
