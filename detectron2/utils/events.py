@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import ruamel.yaml
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import cached_property
@@ -23,7 +24,6 @@ __all__ = [
 ]
 
 _CURRENT_STORAGE_STACK = []
-
 
 def get_event_storage():
     """
@@ -316,6 +316,54 @@ class CommonMetricPrinter(EventWriter):
                 memory="max_mem: {:.0f}M".format(max_mem_mb) if max_mem_mb is not None else "",
             )
         )
+
+        # Save the logger to a file
+        if iteration % 2 == 0 or iteration % 3 == 1  or iteration == self._max_iter:
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            if not os.path.exists(self._get_logger_save_path()):
+                return
+
+            save_path = os.path.join(self._get_logger_save_path(), today)
+            if not os.path.exists(save_path):
+                os.makedirs(save_path, exist_ok=True)
+            metrics_dict = {
+                    "time":         time.time(),         # UNIX timestamp
+                    "iter":         iteration,
+                    "eta":          eta_string,          # "" 이면 빈 문자열 저장
+                    "lr":           lr,
+                    "max_mem_mb":   max_mem_mb,
+                    "avg_time":     avg_iter_time,
+                    "last_time":    last_iter_time,
+                    "avg_data":     avg_data_time,
+                    "last_data":    last_data_time,
+                    "loss":  {
+                        k: float(v.median(storage.count_samples(k, self._window_size)))
+                        for k, v in storage.histories().items() if "loss" in k
+                    },
+                    "metric": {
+                        k: float(v.median(storage.count_samples(k, self._window_size)))
+                        for k, v in storage.histories().items() if "[metric]" in k
+                    },
+                }
+            with open(os.path.join(save_path, f"log_{iteration}.json"), "a") as f:
+                json.dump(metrics_dict, f, indent=4)
+                f.write("\n")
+
+    def _get_logger_save_path(self):
+        cfg = self._read_custom_config()
+        return cfg["log_save_path"]
+
+    def _read_custom_config(self):
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        cfg_path = os.path.join(root_path, "../config/custom_config.yaml")
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r") as f:
+                yaml = ruamel.yaml.YAML()
+                cfg = yaml.load(f)
+        else:
+            cfg = {}
+        return cfg
+
 
 
 class EventStorage:
