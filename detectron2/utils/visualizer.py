@@ -244,7 +244,7 @@ def _create_text_labels(classes, scores, class_names, is_crowd=None):
             if classes != [255]:
                 labels = [class_names[i] for i in classes]
             else:
-                labels = 'unknown'
+                labels = ['unknown']
         else:
             labels = [str(i) for i in classes]
     if scores is not None:

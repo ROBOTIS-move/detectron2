@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import ruamel.yaml
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import cached_property
@@ -23,7 +24,6 @@ __all__ = [
 ]
 
 _CURRENT_STORAGE_STACK = []
-_LOGGER_SAVE_PATH = '/mnt/NAS3/auto_labeling/train_logger'
 
 def get_event_storage():
     """
@@ -320,7 +320,10 @@ class CommonMetricPrinter(EventWriter):
         # Save the logger to a file
         if iteration % 2 == 0 or iteration % 3 == 1  or iteration == self._max_iter:
             today = datetime.datetime.now().strftime("%Y-%m-%d")
-            save_path = os.path.join(_LOGGER_SAVE_PATH, today)
+            if not os.path.exists(self._get_logger_save_path()):
+                return
+
+            save_path = os.path.join(self._get_logger_save_path(), today)
             if not os.path.exists(save_path):
                 os.makedirs(save_path, exist_ok=True)
             metrics_dict = {
@@ -345,7 +348,21 @@ class CommonMetricPrinter(EventWriter):
             with open(os.path.join(save_path, f"log_{iteration}.json"), "a") as f:
                 json.dump(metrics_dict, f, indent=4)
                 f.write("\n")
-        
+
+    def _get_logger_save_path(self):
+        cfg = self._read_custom_config()
+        return cfg["log_save_path"]
+
+    def _read_custom_config(self):
+        root_path = os.path.dirname(os.path.abspath(__file__))
+        cfg_path = os.path.join(root_path, "../config/custom_config.yaml")
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r") as f:
+                yaml = ruamel.yaml.YAML()
+                cfg = yaml.load(f)
+        else:
+            cfg = {}
+        return cfg
 
 
 

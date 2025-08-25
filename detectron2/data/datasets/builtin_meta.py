@@ -206,8 +206,9 @@ def _get_builtin_metadata(dataset_name):
             "vehicle", "pedestrian",
         ]
         CITYSCAPES_STUFF_CLASSES = [
-            'runway', 'curb', 'mat', 'braille-block', 'cross-walk', 'bicycle-road',
-            'speed-bump', 'manhole', 'dynamic', 'static', 'void', 'tree', 'poll',
+            'runway', 'road', 'curb', 'mat', 'braille-block', 'cross-walk', 'bicycle-road',
+            'speed-bump', 'manhole', 'dynamic', 'static', 'void', 'tree', 'poll', 'terrain',
+            'vegetation',
         ]
         # fmt: on
         return {
