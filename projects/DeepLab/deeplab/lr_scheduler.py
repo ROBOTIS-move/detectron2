@@ -39,6 +39,7 @@ class WarmupPolyLR(LRScheduler):
         self.warmup_method = warmup_method
         self.power = power
         self.constant_ending = constant_ending
+        self.original_max_iters = max_iters  # 원래 max_iters 값을 저장
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self) -> List[float]:
@@ -52,6 +53,10 @@ class WarmupPolyLR(LRScheduler):
                 < self.constant_ending
             ):
                 return [base_lr * self.constant_ending for base_lr in self.base_lrs]
+
+        if self.max_iters < self.original_max_iters:
+            self.max_iters = self.original_max_iters
+
         return [
             base_lr * warmup_factor * math.pow((1.0 - self.last_epoch / self.max_iters), self.power)
             for base_lr in self.base_lrs
