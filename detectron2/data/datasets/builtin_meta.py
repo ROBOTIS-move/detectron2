@@ -75,22 +75,26 @@ KEYPOINT_CONNECTION_RULES = [
 CITYSCAPES_CATEGORIES = [
     {"color": (0, 102, 0), "isthing": 0, "id": 0, "trainId": 0, "name": "runway"},
     {"color": (128, 64, 128), "isthing": 0, "id": 1, "trainId": 1, "name": "road"},
-    {"color": (102, 102, 255), "isthing": 0, "id": 2, "trainId": 2, "name": "curb"},
-    {"color": (0, 100, 150), "isthing": 0, "id": 3, "trainId": 3, "name": "mat"},
-    {"color": (255, 255, 0), "isthing": 0, "id": 4, "trainId": 4, "name": "braille-block"},
-    {"color": (64, 255, 0), "isthing": 0, "id": 5, "trainId": 5, "name": "cross-walk"},
-    {"color": (204, 51, 204), "isthing": 0, "id": 6, "trainId": 6, "name": "bicycle-road"},
-    {"color": (153, 102, 0), "isthing": 0, "id": 7, "trainId": 7, "name": "speed-bump"},
-    {"color": (255, 200, 255), "isthing": 0, "id": 8, "trainId": 8, "name": "manhole"},
-    {"color": (152, 251, 152), "isthing": 0, "id": 9, "trainId": 9, "name": "terrain"},
-    {"color": (107, 142, 35), "isthing": 0, "id": 10, "trainId": 10, "name": "vegetation"},
-    {"color": (250, 0, 150), "isthing": 0, "id": 11, "trainId": 11, "name": "poll"},
+    {"color": (0, 100, 150), "isthing": 0, "id": 2, "trainId": 2, "name": "mat"},
+    {"color": (255, 255, 0), "isthing": 0, "id": 3, "trainId": 3, "name": "braille-block"},
+    {"color": (64, 255, 0), "isthing": 0, "id": 4, "trainId": 4, "name": "cross-walk"},
+    {"color": (204, 51, 204), "isthing": 0, "id": 5, "trainId": 5, "name": "bicycle-road"},
+    {"color": (153, 102, 0), "isthing": 0, "id": 6, "trainId": 6, "name": "speed-bump"},
+    {"color": (152, 251, 152), "isthing": 0, "id": 7, "trainId": 7, "name": "terrain"},
+    {"color": (107, 142, 35), "isthing": 0, "id": 8, "trainId": 8, "name": "vegetation"},
+    {"color": (70, 130, 180), "isthing": 0, "id": 9, "trainId": 9, "name": "sky"},
+    {"color": (250, 0, 150), "isthing": 0, "id": 10, "trainId": 10, "name": "pole"},
+    {"color": (116, 27, 71), "isthing": 0, "id": 11, "trainId": 11, "name": "pole-group"},
     {"color": (220, 20, 60), "isthing": 1, "id": 12, "trainId": 12, "name": "pedestrian"},
-    {"color": (155, 50, 0), "isthing": 0, "id": 13, "trainId": 13, "name": "tree"},
-    {"color": (250, 200, 100), "isthing": 1, "id": 14, "trainId": 14, "name": "vehicle"},
-    {"color": (150, 100, 255), "isthing": 0, "id": 15, "trainId": 15, "name": "dynamic"},
-    {"color": (0, 128, 128), "isthing": 0, "id": 16, "trainId": 16, "name": "static"},
-    {"color": (63, 63, 63), "isthing": 0, "id": 17, "trainId": 255, "name": "void"},
+    {"color": (64, 0, 128), "isthing": 0, "id": 13, "trainId": 13, "name": "traffic-sign"},
+    {"color": (250, 170, 30), "isthing": 0, "id": 14, "trainId": 14, "name": "traffic-light-front"},
+    {"color": (153, 0, 255), "isthing": 0, "id": 15, "trainId": 15, "name": "traffic-light-back"},
+    {"color": (190, 153, 153), "isthing": 0, "id": 16, "trainId": 16, "name": "fence"},
+    {"color": (250, 200, 100), "isthing": 1, "id": 17, "trainId": 17, "name": "vehicle"},
+    {"color": (150, 100, 255), "isthing": 0, "id": 18, "trainId": 18, "name": "dynamic"},
+    {"color": (0, 128, 128), "isthing": 0, "id": 19, "trainId": 19, "name": "static"},
+    {"color": (255, 0, 0), "isthing": 0, "id": 20, "trainId": 255, "name": "forbidden-area"},
+    {"color": (63, 63, 63), "isthing": 0, "id": 21, "trainId": 255, "name": "void"},
 ]
 
 # fmt: off
@@ -203,12 +207,13 @@ def _get_builtin_metadata(dataset_name):
     elif dataset_name == "cityscapes":
         # fmt: off
         CITYSCAPES_THING_CLASSES = [
-            "vehicle", "pedestrian",
+            "vehicle", "pedestrian", # 2
         ]
         CITYSCAPES_STUFF_CLASSES = [
-            'runway', 'road', 'curb', 'mat', 'braille-block', 'cross-walk', 'bicycle-road',
-            'speed-bump', 'manhole', 'dynamic', 'static', 'void', 'tree', 'poll', 'terrain',
-            'vegetation',
+            'runway', 'road', 'mat', 'braille-block', 'cross-walk', 'bicycle-road', # 6
+            'speed-bump', 'dynamic', 'static', 'void', 'terrain', # 5
+            'vegetation', 'sky', 'pole', 'pole-group', 'traffic-sign', 'traffic-light-front', # 6
+            'traffic-light-back', 'fence', # 2
         ]
         # fmt: on
         return {
