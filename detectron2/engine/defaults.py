@@ -499,6 +499,16 @@ class DefaultTrainer(TrainerBase):
             # Here the default print/log frequency of each writer is used.
             # run writers in the end, so that evaluation metrics are written
             ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
+
+        # Add early stopping hook
+        if cfg.EARLY_STOP.ENABLED:
+            ret.append(hooks.EarlyStopping(
+                self.cfg.EARLY_STOP,
+                self.cfg.TEST.EVAL_PERIOD,
+                self.model,
+                self.checkpointer,
+                ))
+
         return ret
 
     def build_writers(self):
@@ -662,22 +672,9 @@ Alternatively, you can call evaluation functions yourself (see Colab balloon tut
                 )
                 logger.info("Evaluation results for {} in csv format:".format(dataset_name))
                 print_csv_format(results_i)
-        print('*' * 100)
-        print(results)
-        cls.save_json(results)
         if len(results) == 1:
             results = list(results.values())[0]
         return results
-
-    @classmethod
-    def save_json(cls, data):
-        save_path = '/home/dc/segmentation-auto-labeling/Mask2Former/output'
-        # 클래스 변수로 counter 관리
-        if not hasattr(cls, '_saver_num'):
-            cls._saver_num = 0
-        with open(os.path.join(f'{save_path}/results_{cls._saver_num}.json'), 'w') as f:
-            json.dump(data, f, indent=4)
-        cls._saver_num += 1
 
     @staticmethod
     def auto_scale_workers(cfg, num_workers: int):
