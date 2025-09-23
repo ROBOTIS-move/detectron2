@@ -239,6 +239,6 @@ def reduce_dict(input_dict, average=True):
 
 def broadcast_stop_flag(stop: bool, device):
     t = torch.tensor([1 if stop else 0], device=device, dtype=torch.int)
-    # rank 0에서 값 셋팅 후 모두에게 전파
+    # set value on rank 0 and broadcast to all
     dist.broadcast(t, src=0)
     return t.item() == 1
