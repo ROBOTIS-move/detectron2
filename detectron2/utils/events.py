@@ -385,6 +385,7 @@ class EventStorage:
         self._current_prefix = ""
         self._vis_data = []
         self._histograms = []
+        self.results = None
 
     def put_image(self, img_name, img_tensor):
         """
@@ -603,3 +604,13 @@ class EventStorage:
         This should be called after histograms are written to tensorboard.
         """
         self._histograms = []
+
+    def put_results(self, results: dict):
+        """
+        Add evaluation results to the storage.
+
+        Args:
+            results (dict): dict of {str: float}
+        """
+        # self.results = {}
+        self.results = results
