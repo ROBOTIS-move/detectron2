@@ -9,6 +9,7 @@ import operator
 import os
 import tempfile
 import time
+import json
 import warnings
 from collections import Counter
 import torch
@@ -39,6 +40,7 @@ __all__ = [
     "PreciseBN",
     "TorchProfiler",
     "TorchMemoryStats",
+    "EarlyStopping",
 ]
 
 
@@ -533,6 +535,7 @@ class EvalHook(HookBase):
                 results, dict
             ), "Eval function must return a dict. Got {} instead.".format(results)
 
+            self.trainer.storage.put_results(results)
             flattened_results = flatten_results_dict(results)
             for k, v in flattened_results.items():
                 try:
@@ -688,3 +691,83 @@ class TorchMemoryStats(HookBase):
                     self._logger.info("\n" + mem_summary)
 
                 torch.cuda.reset_peak_memory_stats()
+
+class EarlyStopping(HookBase):
+    """
+    Early stopping to terminate training when the validation performance does not improve
+    after a given patience.
+    """
+
+    def __init__(self,
+                 early_stopping_cfg,
+                 eval_period,
+                 model,
+                 checkpointer: Checkpointer
+                 ):
+        """
+        Args:
+            early_stopping_cfg (dict): Configuration for early stopping.
+            eval_period (int): The period to run evaluation.
+            model (nn.Module): The model to be saved when early stopping is triggered.
+            checkpointer (Checkpointer): The checkpointer object used to save the best model.
+        """
+        self._cfg = early_stopping_cfg
+        self._eval_period = eval_period
+        self._model = model
+        self._checkpointer = checkpointer
+        self._best_model = None
+        self._best_score = 0
+        self._patience = 0
+
+    def after_step(self):
+        # same conditions as `EvalHook`
+        next_iter = self.trainer.iter + 1
+        self._results = self.trainer.storage.results
+
+        if (
+            self._eval_period > 0
+            and next_iter % self._eval_period == 0
+            and next_iter != self.trainer.max_iter
+            and self._results is not None
+        ):
+            self._compare_score()
+
+    def _compare_score(self):
+            if self._cfg.TARGET_INDICATOR not in self._results:
+                raise KeyError(f"{self._cfg.TARGET_INDICATOR} not found in {self._results.keys()}")
+
+            self._write_result()
+
+            current_score = self._results[self._cfg.TARGET_INDICATOR][self._cfg.TARGET_METRIC]
+            if current_score > self._best_score:
+                self._best_score = current_score
+                self._best_model = self._model
+                self._patience = 0
+            else:
+                if self._patience >= self._cfg.PATIENCE:
+                    print(
+                        'Early stopping triggered. ' +
+                        f'Best {self._cfg.TARGET_METRIC}: {self._best_score}'
+                    )
+                    # Save the best model before stopping
+                    if self._best_model is not None:
+                        self._checkpointer.model = self._best_model
+                    additional_state = {"iteration": self.trainer.iter}
+                    model_name = f'model_best_{self.trainer.iter}'
+                    self._checkpointer.save(model_name, **additional_state)
+                    self.trainer.early_stop_flag = True
+
+                self._patience += 1
+
+    def _write_result(self):
+        def _get_latest_json_name():
+            file_list = os.listdir(self._cfg.JSON_PATH)
+            json_files = [f for f in file_list if f.startswith('results_') and f.endswith('.json')]
+            nums = [int(f.split('_')[1].split('.')[0]) for f in json_files]
+            return f'results_{max(nums) + 1}.json' if nums else 'results_0.json'
+
+        json_name = _get_latest_json_name()
+        json_path = os.path.join(self._cfg.JSON_PATH, json_name)
+        self._results['iteration'] = self.trainer.iter
+        with PathManager.open(json_path, 'w') as file:
+            json.dump(self._results, file, indent=4)
