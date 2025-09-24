@@ -717,6 +717,7 @@ class EarlyStopping(HookBase):
         self._checkpointer = checkpointer
         self._best_model = None
         self._best_score = 0
+        self._best_iter = 0
         self._patience = 0
 
     def after_step(self):
@@ -742,6 +743,7 @@ class EarlyStopping(HookBase):
             if current_score > self._best_score:
                 self._best_score = current_score
                 self._best_model = self._model
+                self._best_iter = self.trainer.iter
                 self._patience = 0
             else:
                 if self._patience >= self._cfg.PATIENCE:
@@ -752,8 +754,8 @@ class EarlyStopping(HookBase):
                     # Save the best model before stopping
                     if self._best_model is not None:
                         self._checkpointer.model = self._best_model
-                    additional_state = {"iteration": self.trainer.iter}
-                    model_name = f'model_best_{self.trainer.iter}'
+                    additional_state = {"iteration": self._best_iter}
+                    model_name = f'model_best_{self._best_iter}'
                     self._checkpointer.save(model_name, **additional_state)
                     self.trainer.early_stop_flag = True
 
