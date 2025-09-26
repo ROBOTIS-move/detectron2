@@ -729,7 +729,7 @@ class EarlyStopping(HookBase):
             self._eval_period > 0
             and next_iter % self._eval_period == 0
             and next_iter != self.trainer.max_iter
-            and next_iter > self.trainer.max_iter * 0.7
+            and next_iter > self.trainer.max_iter * self._cfg.ITER_MINIMUM_RATIO
             and self._results is not None
         ):
             self._compare_score()
@@ -748,7 +748,8 @@ class EarlyStopping(HookBase):
                 self._patience = 0
             else:
                 if self._patience >= self._cfg.PATIENCE:
-                    print(
+                    logger = logging.getLogger(__name__)
+                    logger.info(
                         'Early stopping triggered. ' +
                         f'Best {self._cfg.TARGET_METRIC}: {self._best_score}'
                     )

@@ -54,11 +54,10 @@ class WarmupPolyLR(LRScheduler):
             ):
                 return [base_lr * self.constant_ending for base_lr in self.base_lrs]
 
-        if self.max_iters < self.original_max_iters:
-            self.max_iters = self.original_max_iters
+        max_iters = max(self.max_iters, self.original_max_iters)
 
         return [
-            base_lr * warmup_factor * math.pow((1.0 - self.last_epoch / self.max_iters), self.power)
+            base_lr * warmup_factor * math.pow((1.0 - self.last_epoch / max_iters), self.power)
             for base_lr in self.base_lrs
         ]
 

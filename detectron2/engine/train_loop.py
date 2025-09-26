@@ -151,9 +151,8 @@ class TrainerBase:
         with EventStorage(start_iter) as self.storage:
             try:
                 self.before_train()
+                device = torch.device(f"cuda:{torch.cuda.current_device()}")
                 for self.iter in range(start_iter, max_iter):
-
-                    device = torch.device(f"cuda:{torch.cuda.current_device()}")
                     stop = comm.broadcast_stop_flag(self.early_stop_flag, device=device)
                     if stop:
                         logger.info(f"Training stopped: early_stop_flag is set to True at iter {self.iter}")
