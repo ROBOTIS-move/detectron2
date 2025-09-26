@@ -729,6 +729,7 @@ class EarlyStopping(HookBase):
             self._eval_period > 0
             and next_iter % self._eval_period == 0
             and next_iter != self.trainer.max_iter
+            and next_iter > self.trainer.max_iter * 0.7
             and self._results is not None
         ):
             self._compare_score()
