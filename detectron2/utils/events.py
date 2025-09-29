@@ -612,4 +612,4 @@ class EventStorage:
         Args:
             results (dict): dict of {str: float}
         """
-        self._results = results
+        self.results = results
