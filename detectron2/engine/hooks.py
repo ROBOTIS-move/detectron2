@@ -373,7 +373,27 @@ class LRScheduler(HookBase):
         if isinstance(self.scheduler, _LRScheduler):
             logger = logging.getLogger(__name__)
             logger.info("Loading scheduler from state_dict ...")
-            self.scheduler.load_state_dict(state_dict)
+
+            # For WarmupPolyLR, preserve max_iters and original_max_iters
+            if hasattr(self.scheduler, 'max_iters') and hasattr(self.scheduler, 'original_max_iters'):
+                _preserved_max_iters = self.scheduler.max_iters
+                _preserved_original_max_iters = self.scheduler.original_max_iters
+                logger.info(
+                    f"Preserving max_iters={_preserved_max_iters}, " +
+                    f"original_max_iters={_preserved_original_max_iters}"
+                )
+
+                self.scheduler.load_state_dict(state_dict)
+
+                # Restore preserved values
+                self.scheduler.max_iters = _preserved_max_iters
+                self.scheduler.original_max_iters = _preserved_original_max_iters
+                logger.info(
+                    f"Restored max_iters={self.scheduler.max_iters}, " +
+                    f"original_max_iters={self.scheduler.original_max_iters}"
+                )
+            else:
+                self.scheduler.load_state_dict(state_dict)
 
 
 class TorchProfiler(HookBase):
@@ -715,21 +735,25 @@ class EarlyStopping(HookBase):
         self._eval_period = eval_period
         self._model = model
         self._checkpointer = checkpointer
+        self._minimum_iter = 0
         self._best_model = None
         self._best_score = 0
         self._best_iter = 0
         self._patience = 0
 
     def after_step(self):
-        # same conditions as `EvalHook`
         next_iter = self.trainer.iter + 1
         self._results = self.trainer.storage.results
 
+        if self._minimum_iter == 0:
+            self._minimum_iter = int(self._cfg.ITER_MINIMUM_RATIO * self.trainer.max_iter)
+
+        # same conditions as `EvalHook`
         if (
             self._eval_period > 0
             and next_iter % self._eval_period == 0
             and next_iter != self.trainer.max_iter
-            and next_iter > self.trainer.max_iter * self._cfg.ITER_MINIMUM_RATIO
+            and next_iter > self._minimum_iter
             and self._results is not None
         ):
             self._compare_score()
