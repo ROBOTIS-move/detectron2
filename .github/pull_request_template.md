@@ -1,10 +1,49 @@
-Thanks for your contribution!
+### 목적
+  * PR의 목적을 간략히 작성해주세요.
+### 내용
+  * PR의 내용을 상세히 작성해주세요.
+    * 리뷰어의 이해도를 높일 수 있는 자료 추가를 지향해 주세요.
+    * 리뷰어에게 요청하는 사항을 적어주세요.
+        * 작성 예시 : `구조 위주로 리뷰 부탁드립니다.` / `수식 위주로 리뷰 부탁드립니다.`
+    * 연산 속도가 중요한 기능 추가의 경우 연산 속도 측정 결과를 추가해주세요.
+---
+### 기능 동작 검증
+  * 테스트를 진행한 환경과 테스트 방식을 작성해주세요.
+  * 작성 예시 : `G40_0003에서 실내 자율주행 테스트 완료` / `로컬 개발 환경에서 테스트 완료`
+---
+### 연관 이슈 및 PR
+  * 연관된 이슈를 작성해주세요.
+  * 병합 순서는 상관 없지만 연관성이 존재하는 PR 리스트를 작성해주세요.
 
-If you're sending a large PR (e.g., >100 lines),
-please open an issue first about the feature / bug, and indicate how you want to contribute.
+### 선행 PR
+  * 선행적으로 병합되어야 하는 PR 리스트를 작성해주세요.
 
-We do not always accept features.
-See https://detectron2.readthedocs.io/notes/contributing.html#pull-requests about how we handle PRs.
+---
+### PR 유형별 가이드
+> 아래 가이드를 참고하여 **해당 유형에 맞는 방식으로** PR을 진행해주세요.
 
-Before submitting a PR, please run `dev/linter.sh` to lint the code.
+#### 🔥 핫픽스 (hotfix-* → main)
+1. hotfix-* 브랜치 명을 사용하고 아래와 같은 브랜치명은 피해주세요.
+    * `hotfix-develop`
+    * `hotfix-main`
+2. 핫픽스 PR에 version 및 CHANGELOG.rst 변경은 하지 말아주세요.
+    * version 과 CHANGELOG.rst 수정 PR이 자동으로 생성되고 머지될거에요.
+3. PR 제목을 작성할 때 `[Hotfix]` 와 같은 접두어(prefix)는 붙이지 말아주세요.
+    * 작성 예시 :  `Fixed the PR template`
+    * PR을 생성하고 조금만 기다리면 자동으로 버전에 맞는 prefix가 붙게 돼요.
+4. 목적, 내용, 기능 검증을 **꼼꼼히 작성**해주세요.
+5. 리뷰어 수는 본인을 제외하고 2명 이상을 요청해주세요.
+6. 리뷰가 끝나면 머지 버튼을 직접 눌러주세요. (핫픽스 PR은 "Auto Merge enable" 기능을 사용할 수 없어요.)
+7. 핫픽스 PR이 머지되면, 아래에 `version`, `CHANGELOG.rst` 변경 PR이 자동으로 생성되고 머지 될 거에요.
+   * `[Hotfix {version} to main]`
+   * `[Hotfix {version} to develop]`
+   * 지켜만 보고 시간이 지났음에도 여전히 위 제목의 PR이 남아 있다면 Devops 담당자에게 말씀해주세요.
+8. 모든 핫픽스 관련 PR이 머지되면, 자동으로 릴리즈 태그가 추가되고 핫픽스 작업이 완료됩니다.
 
+#### 🛠️ 기능 개발 (feature-* → develop)
+1. feature-* 브랜치 명을 사용해주세요.
+2. PR 제목을 작성해주세요.
+   * 작성 예시 :  `Modified the PR template`
+3. 목적, 내용, 기능 검증을 **꼼꼼히 작성**해주세요.
+4. 리뷰어 수는 본인을 제외하고 2명 이상을 요청해주세요.
+---

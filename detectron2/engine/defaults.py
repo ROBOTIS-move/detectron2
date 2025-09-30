@@ -14,6 +14,8 @@ import logging
 import os
 import sys
 import weakref
+import json
+
 from collections import OrderedDict
 from typing import Optional
 import torch
@@ -497,6 +499,16 @@ class DefaultTrainer(TrainerBase):
             # Here the default print/log frequency of each writer is used.
             # run writers in the end, so that evaluation metrics are written
             ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
+
+        # Add early stopping hook
+        if cfg.EARLY_STOP.ENABLED:
+            ret.append(hooks.EarlyStopping(
+                self.cfg.EARLY_STOP,
+                self.cfg.TEST.EVAL_PERIOD,
+                self.model,
+                self.checkpointer,
+                ))
+
         return ret
 
     def build_writers(self):
@@ -660,7 +672,6 @@ Alternatively, you can call evaluation functions yourself (see Colab balloon tut
                 )
                 logger.info("Evaluation results for {} in csv format:".format(dataset_name))
                 print_csv_format(results_i)
-
         if len(results) == 1:
             results = list(results.values())[0]
         return results

@@ -236,3 +236,9 @@ def reduce_dict(input_dict, average=True):
             values /= world_size
         reduced_dict = {k: v for k, v in zip(names, values)}
     return reduced_dict
+
+def broadcast_stop_flag(stop: bool, device):
+    t = torch.tensor([1 if stop else 0], device=device, dtype=torch.int)
+    # set value on rank 0 and broadcast to all
+    dist.broadcast(t, src=0)
+    return t.item() == 1
