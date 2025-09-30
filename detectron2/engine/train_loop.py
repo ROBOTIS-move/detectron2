@@ -117,6 +117,7 @@ class TrainerBase:
         self.max_iter: int
         self.storage: EventStorage
         _log_api_usage("trainer." + self.__class__.__name__)
+        self.early_stop_flag = False
 
     def register_hooks(self, hooks: List[Optional[HookBase]]) -> None:
         """
@@ -150,7 +151,13 @@ class TrainerBase:
         with EventStorage(start_iter) as self.storage:
             try:
                 self.before_train()
+                device = torch.device(f"cuda:{torch.cuda.current_device()}")
                 for self.iter in range(start_iter, max_iter):
+                    stop = comm.broadcast_stop_flag(self.early_stop_flag, device=device)
+                    if stop:
+                        logger.info(f"Training stopped: early_stop_flag is set to True at iter {self.iter}")
+                        break
+
                     self.before_step()
                     self.run_step()
                     self.after_step()
@@ -162,7 +169,8 @@ class TrainerBase:
                 logger.exception("Exception during training:")
                 raise
             finally:
-                self.after_train()
+                if not self.early_stop_flag:
+                    self.after_train()
 
     def before_train(self):
         for h in self._hooks:
