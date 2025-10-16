@@ -29,7 +29,10 @@ except ImportError:
     
     def rgb2id(rgb):
         """Convert RGB image back to panoptic ID map"""
-        return rgb[:, :, 0] + rgb[:, :, 1] * 256 + rgb[:, :, 2] * 256 * 256
+        # Convert to int32 to avoid overflow when multiplying by 256
+        rgb = rgb.astype(np.int32)
+        result = rgb[:, :, 0] + rgb[:, :, 1] * 256 + rgb[:, :, 2] * 256 * 256
+        return result.astype(np.int32)
 
 
 class GaemiEvaluator:
@@ -308,21 +311,49 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
             
             # 이미지 로드
             pred_rgb = np.array(Image.open(pred_path))
-            gt_rgb = np.array(Image.open(gt_path))
+            
+            # GT 로드: 팔레트 PNG인 경우 원본 인덱스 값 읽기
+            gt_pil = Image.open(gt_path)
+            if gt_pil.mode == 'P':
+                # 팔레트 모드: 원본 인덱스가 class ID
+                gt_semantic = np.array(gt_pil).astype(np.int32)
+            elif len(np.array(gt_pil).shape) == 3:
+                # RGB 모드: rgb2id로 변환
+                gt_semantic = rgb2id(np.array(gt_pil))
+            else:
+                # Grayscale: 직접 사용
+                gt_semantic = np.array(gt_pil).astype(np.int32)
             
             # 크기 확인
-            if pred_rgb.shape[:2] != gt_rgb.shape[:2]:
+            pred_rgb_array = pred_rgb
+            if pred_rgb_array.shape[:2] != gt_semantic.shape[:2]:
                 self._logger.warning(f"Shape mismatch for {base_name}, skipping")
                 continue
             
-            # RGB를 panoptic ID로 변환
-            # GT는 이미 RGB 형식이라고 가정 (PNG 형식)
-            # 만약 GT가 이미 ID 형식이면 이 부분 수정 필요
-            if len(gt_rgb.shape) == 3 and gt_rgb.shape[2] == 3:
-                gt_panoptic = rgb2id(gt_rgb)
-            else:
-                gt_panoptic = gt_rgb
+            # GT를 panoptic format으로 변환 (class ID -> panoptic ID)
+            # GT는 semantic segmentation format (class ID만 있음)
+            # 각 class의 연결된 영역을 개별 인스턴스로 변환
+            from scipy import ndimage
+            label_divisor = self._metadata.label_divisor
+            gt_panoptic = np.zeros_like(gt_semantic, dtype=np.int32)
             
+            for class_id in np.unique(gt_semantic):
+                if class_id == 0:  # void 제외
+                    continue
+                    
+                # 해당 클래스의 마스크
+                class_mask = (gt_semantic == class_id)
+                
+                # 연결된 영역 찾기 (connected components)
+                labeled_mask, num_instances = ndimage.label(class_mask)
+                
+                # 각 인스턴스에 panoptic ID 할당
+                for instance_id in range(1, num_instances + 1):
+                    instance_mask = (labeled_mask == instance_id)
+                    panoptic_id = class_id * label_divisor + instance_id
+                    gt_panoptic[instance_mask] = panoptic_id
+            
+            # 예측 RGB를 panoptic ID로 변환
             pred_panoptic = rgb2id(pred_rgb)
             
             # ===== 4. Panoptic Quality 계산 =====
@@ -348,6 +379,10 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
             pred_panoptic: 예측 panoptic ID 맵 [H, W]
             gt_panoptic: GT panoptic ID 맵 [H, W]
         """
+        # Convert to int32 to avoid overflow when dividing by label_divisor
+        pred_panoptic = pred_panoptic.astype(np.int32)
+        gt_panoptic = gt_panoptic.astype(np.int32)
+        
         label_divisor = self._metadata.label_divisor
         
         # ===== 1. 예측 세그먼트 추출 =====
@@ -362,6 +397,8 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
                 'mask': mask,
                 'area': np.sum(mask)
             }
+
+        # print(pred_segments)
         
         # ===== 2. GT 세그먼트 추출 =====
         gt_segments = {}
@@ -375,6 +412,8 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
                 'mask': mask,
                 'area': np.sum(mask)
             }
+        
+        # print(gt_segments)
         
         # ===== 3. 세그먼트 매칭 (같은 클래스 내에서) =====
         matched_pairs = []  # [(pred_id, gt_id, iou), ...]
@@ -448,6 +487,10 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
         """
         Semantic segmentation용 혼동 행렬 업데이트
         """
+        # Convert to int32 first to avoid overflow
+        pred_panoptic = pred_panoptic.astype(np.int32)
+        gt_panoptic = gt_panoptic.astype(np.int32)
+        
         label_divisor = self._metadata.label_divisor
         
         # Panoptic ID에서 category ID만 추출
