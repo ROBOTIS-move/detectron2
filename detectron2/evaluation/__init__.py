@@ -9,5 +9,6 @@ from .pascal_voc_evaluation import PascalVOCDetectionEvaluator
 from .sem_seg_evaluation import SemSegEvaluator
 from .testing import print_csv_format, verify_results
 from .gaemi_evaluation import GaemiPanopticEvaluator
+from .gaemi_evaluation import GaemiSemsegEvaluator
 
 __all__ = [k for k in globals().keys() if not k.startswith("_")]
