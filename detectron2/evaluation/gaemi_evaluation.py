@@ -12,7 +12,7 @@ from glob import glob
 from detectron2.data import MetadataCatalog
 from detectron2.utils import comm
 from detectron2.utils.file_io import PathManager
-from Mask2Former.custom_util.config.class_config import class_info
+# from Mask2Former.custom_util.config.class_config import class_info
 from .evaluator import DatasetEvaluator
 
 def id2rgb(id_map):
@@ -88,7 +88,8 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
         
         # 로깅
         self._logger.info(f"Loaded {len(self._contiguous_id_to_dataset_id)} class ID mappings")
-        self._logger.debug(f"Contiguous->Dataset mapping: {self._contiguous_id_to_dataset_id}")
+        self._logger.info(f"Dataset->Contiguous mapping: {sorted(dataset_to_contiguous.items())}")
+        self._logger.info(f"Contiguous->Dataset mapping: {sorted(self._contiguous_id_to_dataset_id.items())}")
         
         # Confusion Matrix 초기화
         self.reset()
@@ -153,18 +154,40 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
         2. GT 로드하여 Confusion Matrix 업데이트
         """
        
+        # 첫 번째 이미지에서 매핑 정보 출력
+        debug_first = not hasattr(self, '_process_debug_done')
+        
         for input, output in zip(inputs, outputs):
             # ===== 1. 예측 처리 =====
             if 'sem_seg' not in output:
                 raise ValueError("Expected 'sem_seg' in model output for semantic segmentation.")
             
-            # 모델 출력: contiguous_id (0, 1, 2, ...)
-            pred_contiguous = output['sem_seg'].argmax(dim=0).to(self._cpu_device).numpy()
+            # 모델 출력: contiguous_id
+            # 주의: Mask2Former는 0을 background로 사용하므로 실제 클래스는 1부터 시작
+            pred_contiguous_raw = output['sem_seg'].argmax(dim=0).to(self._cpu_device).numpy()
+            
+            if debug_first:
+                self._logger.info(f"[PROCESS DEBUG] pred_contiguous_raw unique: {np.unique(pred_contiguous_raw)}")
+                self._logger.info(f"[PROCESS DEBUG] ID mapping: {sorted(self._contiguous_id_to_dataset_id.items())}")
+                self._process_debug_done = True
 
             # ===== 2. 예측 PNG 저장 (dataset_id로 변환) =====
-            pred_dataset = np.zeros(pred_contiguous.shape, dtype=np.uint8)
-            for train_id, label in self._contiguous_id_to_dataset_id.items():
-                pred_dataset[pred_contiguous == train_id] = label
+            # 255로 초기화 (ignore label, 검은색 방지)
+            pred_dataset = np.full(pred_contiguous_raw.shape, 255, dtype=np.uint8)
+            
+            # 모델 출력을 0-based contiguous_id로 변환 (1 빼기)
+            # 모델: 0=background, 1=class_0, 2=class_1, ...
+            # 매핑: 0=class_0, 1=class_1, ...
+            pred_contiguous = pred_contiguous_raw.copy()
+            pred_contiguous[pred_contiguous_raw > 0] = pred_contiguous_raw[pred_contiguous_raw > 0] - 1
+            
+            # contiguous_id → dataset_id 변환
+            for contiguous_id, dataset_id in self._contiguous_id_to_dataset_id.items():
+                # dataset_id가 uint8 범위를 초과하면 경고
+                if dataset_id > 255:
+                    self._logger.warning(f"dataset_id {dataset_id} exceeds uint8 range, clipping to 255")
+                    dataset_id = 255
+                pred_dataset[pred_contiguous == contiguous_id] = dataset_id
             
             file_name = input.get('image_id', 'unknown')
             pred_file = os.path.join(self._working_dir, f"{file_name}.png")
@@ -351,11 +374,12 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
         
         # ID 매핑: contiguous_id -> dataset_id
         self._contiguous_id_to_dataset_id = {}
+        self.class_info = self._metadata.class_info
         for contiguous_id, class_name in enumerate(self._metadata.thing_classes):
-            if class_name in class_info:
-                self._contiguous_id_to_dataset_id[contiguous_id] = class_info[class_name]['id']
-        
-        
+            if class_name in self.class_info:
+                self._contiguous_id_to_dataset_id[contiguous_id] = self.class_info[class_name]['id']
+
+
         # 평가 메트릭 저장용
         self.reset()
     
@@ -393,7 +417,7 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
         
         # class_info의 색상 → class_id 매핑 생성
         color_to_class_id = {}
-        for class_name, info in class_info.items():
+        for class_name, info in self.class_info.items():
             color_tuple = tuple(info['color'])  # [R, G, B] → (R, G, B)
             color_to_class_id[color_tuple] = info['id']
         
@@ -525,7 +549,7 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
                 
                 # dataset_id를 class_name으로 매핑
                 dataset_id_to_class_name = {}
-                for class_name, info in class_info.items():
+                for class_name, info in self.class_info.items():
                     dataset_id_to_class_name[info['id']] = class_name
                 
                 # 각 세그먼트에 클래스별 색상 적용
@@ -539,8 +563,8 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
                     
                     class_name = dataset_id_to_class_name.get(dataset_category_id, 'void')
                     
-                    if class_name in class_info:
-                        color = class_info[class_name]['color']
+                    if class_name in self.class_info:
+                        color = self.class_info[class_name]['color']
                     else:
                         color = [128, 128, 128]
                     
