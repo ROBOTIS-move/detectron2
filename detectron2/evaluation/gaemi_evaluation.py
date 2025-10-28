@@ -296,4 +296,4 @@ class GaemiPanopticEvaluator(GaemiEvaluator):
 
     def __init__(self, dataset_name):
         super().__init__(dataset_name)
-        pass
+        raise NotImplementedError("GaemiPanopticEvaluator is not implemented yet.")
