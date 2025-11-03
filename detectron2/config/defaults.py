@@ -111,12 +111,12 @@ _C.DATASETS.PRECOMPUTED_PROPOSAL_TOPK_TEST = 1000
 _C.DATASETS.DATA_DIR_PATH = ''
 _C.DATASETS.TRAIN_JSON_PATH = ''
 _C.DATASETS.TEST_JSON_PATH = ''
+_C.DATASETS.BENCHMARK = ()
+_C.DATASETS.BENCHMARK_JSON_PATH = ''
 _C.DATASETS.CLASS_NAMES = []
 _C.DATASETS.STUFF_CLASSES = []
 _C.DATASETS.THING_CLASSES = []
 _C.DATASETS.TARGET_SERVICE_AREAS = []  # 특정 service area만 사용하려면 리스트로 지정, 빈 리스트면 모든 지역 사용
-_C.DATASETS.remap_flag = False
-_C.DATASETS.convert_classes_mapping = []
 
 # -----------------------------------------------------------------------------
 # DataLoader
