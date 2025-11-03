@@ -153,7 +153,11 @@ class TrainerBase:
                 self.before_train()
                 device = torch.device(f"cuda:{torch.cuda.current_device()}")
                 for self.iter in range(start_iter, max_iter):
-                    stop = comm.broadcast_stop_flag(self.early_stop_flag, device=device)
+                    # Only use broadcast_stop_flag in distributed training
+                    if comm.get_world_size() > 1:
+                        stop = comm.broadcast_stop_flag(self.early_stop_flag, device=device)
+                    else:
+                        stop = self.early_stop_flag
                     if stop:
                         logger.info(f"Training stopped: early_stop_flag is set to True at iter {self.iter}")
                         break
