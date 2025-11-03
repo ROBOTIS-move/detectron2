@@ -15,6 +15,7 @@ import os
 import sys
 import weakref
 import json
+import datetime
 
 from collections import OrderedDict
 from typing import Optional
@@ -485,7 +486,13 @@ class DefaultTrainer(TrainerBase):
         # This is not always the best: if checkpointing has a different frequency,
         # some checkpoints may have more precise statistics than others.
         if comm.is_main_process():
-            ret.append(hooks.PeriodicCheckpointer(self.checkpointer, cfg.SOLVER.CHECKPOINT_PERIOD))
+            now = datetime.datetime.now()
+            now_str = now.strftime('%Y_%m_%d_%H_%M_%S')
+            ret.append(hooks.PeriodicCheckpointer(
+                self.checkpointer,
+                cfg.SOLVER.CHECKPOINT_PERIOD,
+                file_prefix=now_str
+                ))
 
         def test_and_save_results():
             self._last_eval_results = self.test(self.cfg, self.model)
