@@ -201,6 +201,9 @@ class PeriodicCheckpointer(_PeriodicCheckpointer, HookBase):
     It is executed every ``period`` iterations and after the last iteration.
     """
 
+    def __init__(self, checkpointer, period, file_prefix="model"):
+        _PeriodicCheckpointer.__init__(self, file_prefix=file_prefix)
+
     def before_train(self):
         self.max_iter = self.trainer.max_iter
 
