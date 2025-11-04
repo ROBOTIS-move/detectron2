@@ -465,9 +465,10 @@ class DefaultTrainer(TrainerBase):
         cfg.defrost()
         cfg.DATALOADER.NUM_WORKERS = 0  # save some memory and time for PreciseBN
 
+        add_iter = cfg.SOLVER.ADD_ITER
         ret = [
             hooks.IterationTimer(),
-            hooks.LRScheduler(),
+            hooks.LRScheduler(add_iter=add_iter),
             (
                 hooks.PreciseBN(
                     # Run at the same freq as (but before) evaluation.
