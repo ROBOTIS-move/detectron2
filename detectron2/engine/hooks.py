@@ -202,7 +202,10 @@ class PeriodicCheckpointer(_PeriodicCheckpointer, HookBase):
     """
 
     def __init__(self, checkpointer, period, file_prefix="model"):
-        _PeriodicCheckpointer.__init__(self, file_prefix=file_prefix)
+        _PeriodicCheckpointer.__init__(self,
+                                       checkpointer=checkpointer,
+                                       period=period,
+                                       file_prefix=file_prefix)
 
     def before_train(self):
         self.max_iter = self.trainer.max_iter
@@ -315,7 +318,7 @@ class LRScheduler(HookBase):
     It is executed after every iteration.
     """
 
-    def __init__(self, optimizer=None, scheduler=None):
+    def __init__(self, optimizer=None, scheduler=None, add_iter=0):
         """
         Args:
             optimizer (torch.optim.Optimizer):
@@ -327,6 +330,7 @@ class LRScheduler(HookBase):
         """
         self._optimizer = optimizer
         self._scheduler = scheduler
+        self._add_iter = add_iter
 
     def before_train(self):
         self._optimizer = self._optimizer or self.trainer.optimizer
@@ -389,7 +393,7 @@ class LRScheduler(HookBase):
                 self.scheduler.load_state_dict(state_dict)
 
                 # Restore preserved values
-                self.scheduler.max_iters = _preserved_max_iters
+                self.scheduler.max_iters = _preserved_max_iters + self._add_iter
                 self.scheduler.original_max_iters = _preserved_original_max_iters
                 logger.info(
                     f"Restored max_iters={self.scheduler.max_iters}, " +
