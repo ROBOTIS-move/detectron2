@@ -201,6 +201,12 @@ class PeriodicCheckpointer(_PeriodicCheckpointer, HookBase):
     It is executed every ``period`` iterations and after the last iteration.
     """
 
+    def __init__(self, checkpointer, period, file_prefix="model"):
+        _PeriodicCheckpointer.__init__(self,
+                                       checkpointer=checkpointer,
+                                       period=period,
+                                       file_prefix=file_prefix)
+
     def before_train(self):
         self.max_iter = self.trainer.max_iter
 
@@ -312,7 +318,7 @@ class LRScheduler(HookBase):
     It is executed after every iteration.
     """
 
-    def __init__(self, optimizer=None, scheduler=None):
+    def __init__(self, optimizer=None, scheduler=None, add_iter=0):
         """
         Args:
             optimizer (torch.optim.Optimizer):
@@ -324,6 +330,7 @@ class LRScheduler(HookBase):
         """
         self._optimizer = optimizer
         self._scheduler = scheduler
+        self._add_iter = add_iter
 
     def before_train(self):
         self._optimizer = self._optimizer or self.trainer.optimizer
@@ -386,7 +393,7 @@ class LRScheduler(HookBase):
                 self.scheduler.load_state_dict(state_dict)
 
                 # Restore preserved values
-                self.scheduler.max_iters = _preserved_max_iters
+                self.scheduler.max_iters = _preserved_max_iters + self._add_iter
                 self.scheduler.original_max_iters = _preserved_original_max_iters
                 logger.info(
                     f"Restored max_iters={self.scheduler.max_iters}, " +
@@ -741,12 +748,15 @@ class EarlyStopping(HookBase):
         self._best_iter = 0
         self._patience = 0
 
+        self.logger = logging.getLogger(__name__)
+
     def after_step(self):
         next_iter = self.trainer.iter + 1
         self._results = self.trainer.storage.results
 
         if self._minimum_iter == 0:
-            self._minimum_iter = int(self._cfg.ITER_MINIMUM_RATIO * self.trainer.max_iter)
+            # Set minimum_iter to the nearest lower multiple of 100
+            self._minimum_iter = (int(self._cfg.ITER_MINIMUM_RATIO * self.trainer.max_iter) // 100) * 100
 
         # same conditions as `EvalHook`
         if (
@@ -772,16 +782,16 @@ class EarlyStopping(HookBase):
                 self._patience = 0
             else:
                 if self._patience >= self._cfg.PATIENCE:
-                    logger = logging.getLogger(__name__)
-                    logger.info(
+                    self.logger.info(
                         'Early stopping triggered. ' +
                         f'Best {self._cfg.TARGET_METRIC}: {self._best_score}'
                     )
                     # Save the best model before stopping
                     if self._best_model is not None:
                         self._checkpointer.model = self._best_model
+                    now = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
                     additional_state = {"iteration": self._best_iter}
-                    model_name = f'model_best_{self._best_iter}'
+                    model_name = f'{now}_best_model_{self._best_iter}'
                     self._checkpointer.save(model_name, **additional_state)
                     self.trainer.early_stop_flag = True
 
