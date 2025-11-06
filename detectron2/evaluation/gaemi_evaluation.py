@@ -153,12 +153,9 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
             res[f"IoU-{name}"] = 100 * iou[i] if not np.isnan(iou[i]) else 0.0
             res[f"ACC-{name}"] = 100 * acc[i] if not np.isnan(acc[i]) else 0.0
 
-        orderdict_res = OrderedDict()
-        orderdict_res['sem_seg'] = res
+        ordereddict_res = OrderedDict([('sem_seg', res)])
 
-        self._logger.debug(f"Computed metrics: {orderdict_res}")
-
-        return orderdict_res, iou
+        return ordereddict_res, iou
 
     def process(self, inputs, outputs):
         for input, output in zip(inputs, outputs):
