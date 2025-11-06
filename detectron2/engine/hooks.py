@@ -338,9 +338,12 @@ class LRScheduler(HookBase):
             self._scheduler = LRMultiplier(
                 self._optimizer,
                 self.scheduler,
-                self.trainer.max_iter,
+                self.trainer.max_iter + self._add_iter,
                 last_iter=self.trainer.iter - 1,
             )
+        # Update max_iters for existing scheduler
+        elif hasattr(self.scheduler, 'max_iters'):
+            self.scheduler.max_iters = self.trainer.max_iter + self._add_iter
         self._best_param_group_id = LRScheduler.get_best_param_group_id(self._optimizer)
 
     @staticmethod
@@ -751,6 +754,9 @@ class EarlyStopping(HookBase):
         self.logger = logging.getLogger(__name__)
 
     def after_step(self):
+        if not comm.is_main_process():
+            return
+
         next_iter = self.trainer.iter + 1
         self._results = self.trainer.storage.results
 
@@ -798,14 +804,10 @@ class EarlyStopping(HookBase):
                 self._patience += 1
 
     def _write_result(self):
-        def _get_latest_json_name():
-            file_list = os.listdir(self._cfg.JSON_PATH)
-            json_files = [f for f in file_list if f.startswith('results_') and f.endswith('.json')]
-            nums = [int(f.split('_')[1].split('.')[0]) for f in json_files]
-            return f'results_{max(nums) + 1}.json' if nums else 'results_0.json'
-
-        json_name = _get_latest_json_name()
-        json_path = os.path.join(self._cfg.JSON_PATH, json_name)
+        json_path = os.path.join(
+            self._cfg.JSON_PATH,
+            f'results_{self.trainer.iter}.json'
+        )
         self._results['iteration'] = self.trainer.iter
         with PathManager.open(json_path, 'w') as file:
             json.dump(self._results, file, indent=4)
