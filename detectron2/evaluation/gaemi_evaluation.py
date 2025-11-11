@@ -142,7 +142,7 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
         fiou = np.sum(iou[iou_valid] * class_weights[iou_valid]) if np.sum(iou_valid) > 0 else 0
 
         # ===== Construct results =====
-        res = OrderedDict()
+        res = {}
         res["mIoU"] = 100 * miou
         res["fwIoU"] = 100 * fiou
         res["mACC"] = 100 * macc
@@ -153,7 +153,9 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
             res[f"IoU-{name}"] = 100 * iou[i] if not np.isnan(iou[i]) else 0.0
             res[f"ACC-{name}"] = 100 * acc[i] if not np.isnan(acc[i]) else 0.0
 
-        return res, iou
+        ordereddict_res = OrderedDict([('sem_seg', res)])
+
+        return ordereddict_res, iou
 
     def process(self, inputs, outputs):
         for input, output in zip(inputs, outputs):
@@ -276,10 +278,10 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
 
         self._logger.info("=" * 70)
         self._logger.info("Semantic Segmentation Evaluation Results:")
-        self._logger.info(f"  mIoU:  {res['mIoU']:.2f}")
-        self._logger.info(f"  fwIoU: {res['fwIoU']:.2f}")
-        self._logger.info(f"  mACC:  {res['mACC']:.2f}")
-        self._logger.info(f"  pACC:  {res['pACC']:.2f}")
+        self._logger.info(f"  mIoU:  {res['sem_seg']['mIoU']:.2f}")
+        self._logger.info(f"  fwIoU: {res['sem_seg']['fwIoU']:.2f}")
+        self._logger.info(f"  mACC:  {res['sem_seg']['mACC']:.2f}")
+        self._logger.info(f"  pACC:  {res['sem_seg']['pACC']:.2f}")
         self._logger.info("-" * 70)
         self._logger.info("Per-class IoU:")
         for i, name in enumerate(self._class_names):
@@ -287,7 +289,8 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
                 self._logger.info(f"  {name:20s}: {100 * iou[i]:5.2f}")
         self._logger.info("=" * 70)
 
-        return OrderedDict({"sem_seg": res})
+        self._logger.info(f"Final evaluation result: {res}")
+        return res
 
 class GaemiPanopticEvaluator(GaemiEvaluator):
     """
