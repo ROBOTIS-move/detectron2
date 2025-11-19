@@ -774,11 +774,11 @@ class EarlyStopping(HookBase):
         ):
             self._compare_score()
 
+        self._write_result()
+
     def _compare_score(self):
             if self._cfg.TARGET_INDICATOR not in self._results:
                 raise KeyError(f"{self._cfg.TARGET_INDICATOR} not found in {self._results.keys()}")
-
-            self._write_result()
 
             current_score = self._results[self._cfg.TARGET_INDICATOR][self._cfg.TARGET_METRIC]
             if current_score > self._best_score:
