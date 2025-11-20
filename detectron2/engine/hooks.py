@@ -774,7 +774,8 @@ class EarlyStopping(HookBase):
         ):
             self._compare_score()
 
-        self._write_result()
+        if self._results is not None and next_iter % self._eval_period == 0:
+            self._write_result()
 
     def _compare_score(self):
             if self._cfg.TARGET_INDICATOR not in self._results:
