@@ -117,6 +117,7 @@ _C.DATASETS.CLASS_NAMES = []
 _C.DATASETS.STUFF_CLASSES = []
 _C.DATASETS.THING_CLASSES = []
 _C.DATASETS.TARGET_SERVICE_AREAS = []  # 특정 service area만 사용하려면 리스트로 지정, 빈 리스트면 모든 지역 사용
+_C.DATASETS.MOUNT_PATH = ''  # Base mount path for combining with relative file paths
 
 # -----------------------------------------------------------------------------
 # DataLoader

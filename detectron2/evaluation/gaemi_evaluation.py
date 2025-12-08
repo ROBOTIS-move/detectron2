@@ -29,13 +29,14 @@ class GaemiEvaluator(DatasetEvaluator):
         # Only the main process handles directory setup
         if comm.is_main_process():
             if os.path.exists(self._working_dir):
-                self._logger.info(f"Cleaning up old prediction files from previous run...")
+                self._logger.info("Cleaning up old prediction files from previous run...")
                 shutil.rmtree(self._working_dir)
             os.makedirs(self._working_dir, exist_ok=True)
             self._logger.info(f"Prediction directory ready: {self._working_dir}")
 
         # Wait for all processes to finish directory creation
         comm.synchronize()
+
 
 class GaemiSemsegEvaluator(GaemiEvaluator):
     def __init__(self, dataset_name):
@@ -203,6 +204,9 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
             self._logger.error(f"GT JSON file not found: {gt_json_path}")
             raise ValueError(f"GT JSON file not found: {gt_json_path}")
 
+        # Get mount_path from metadata for path compatibility
+        mount_path = getattr(self._metadata, 'mount_path', '')
+
         with open(gt_json_path, 'r') as f:
             gt_data = json.load(f)
 
@@ -228,12 +232,18 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
 
             # Load GT PNG
             gt_seg_path = gt_item.get('sem_seg_file_name')
-            if not gt_seg_path or not os.path.exists(gt_seg_path):
-                self._logger.warning(f"GT file not found: {gt_seg_path}")
+            # Convert to absolute path if mount_path is provided and path is relative
+            if mount_path and not os.path.isabs(gt_seg_path):
+                full_gt_seg_path = os.path.join(mount_path, gt_seg_path)
+            else:
+                full_gt_seg_path = gt_seg_path
+
+            if not full_gt_seg_path or not os.path.exists(full_gt_seg_path):
+                self._logger.warning(f"GT file not found: {full_gt_seg_path}")
                 skipped_count += 1
                 continue
 
-            gt_png = np.array(Image.open(gt_seg_path))
+            gt_png = np.array(Image.open(full_gt_seg_path))
 
             # Load prediction PNG (saved as dataset_id in process())
             pred_png = np.array(Image.open(pred_dict[image_id]))
@@ -291,6 +301,7 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
 
         self._logger.info(f"Final evaluation result: {res}")
         return res
+
 
 class GaemiPanopticEvaluator(GaemiEvaluator):
     """
