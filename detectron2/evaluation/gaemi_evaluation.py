@@ -231,14 +231,19 @@ class GaemiSemsegEvaluator(GaemiEvaluator):
                 continue
 
             # Load GT PNG
-            gt_seg_path = gt_item.get('sem_seg_file_name')
+            gt_seg_path = gt_item.get('sem_seg_file_name', None)
+            if gt_seg_path is None:
+                self._logger.warning(f"No GT sem_seg_file_name for image_id: {image_id}")
+                skipped_count += 1
+                continue
+
             # Convert to absolute path if mount_path is provided and path is relative
             if mount_path and not os.path.isabs(gt_seg_path):
                 full_gt_seg_path = os.path.join(mount_path, gt_seg_path)
             else:
                 full_gt_seg_path = gt_seg_path
 
-            if not full_gt_seg_path or not os.path.exists(full_gt_seg_path):
+            if not os.path.exists(full_gt_seg_path):
                 self._logger.warning(f"GT file not found: {full_gt_seg_path}")
                 skipped_count += 1
                 continue
